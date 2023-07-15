@@ -15,7 +15,7 @@ Given the bimodal undirected nature of these networks, we focus on three types o
 * Part C: Communities and subgroups
 
 ### Data Sets
-Please make sure that this RMD file is in a directory that contains data/clean_data.RData.
+Please make sure that this RMD file is in a directory that contains clean_data.RData.
 
 We used data from IMDB (the Internet Movie Database) to construct affiliate and adjacency matrices for 11 films and 25 lead actors and actresses among Wes Anderson films. These relationships represent when two actors lead
 in the same film together. We also retrieved additional metadata about each film such as date, awards, and ratings. This exercise was repeated for Steven Spielberg (34 actors, 13 films).
