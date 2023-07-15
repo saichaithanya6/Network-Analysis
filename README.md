@@ -17,6 +17,13 @@ Given the bimodal undirected nature of these networks, we focus on three types o
 ### Data Sets
 Please make sure that this RMD file is in a directory that contains data/clean_data.RData.
 
-We used data from IMDB (the Internet Movie Database) to construct affiliate and adjacency matrices for 11 films and 25 lead actors and actresses among Wes Anderson films. These relationships represent when two actors lead in the same film together. We also retrieved additional metadata about each film such as date, awards, and ratings. This exercise was repeated for Steven Spielberg (34 actors, 13 films).
+We used data from IMDB (the Internet Movie Database) to construct affiliate and adjacency matrices for 11 films and 25 lead actors and actresses among Wes Anderson films. These relationships represent when two actors lead
+in the same film together. We also retrieved additional metadata about each film such as date, awards, and ratings. This exercise was repeated for Steven Spielberg (34 actors, 13 films).
 
 These data sets were retrieved using the imdb package (github.com/RMHogervorst/imdb) as well as the OMDB API. See clean_imdb_data.R for details on how we constructed our data sets using these APIs.
+
+
+### Summary
+The look and feel of a Wes Anderson film is unmistakable to fans. Through the tools of social network analysis, we can explore the degree to which this director reuses actors / actresses across the body of work, and which
+ones are particularly central in the network. Before running this analysis one might describe the vibe using visual and storytelling elements – now, one might also describe the vibe as “Owen Wilson, Bill Murray, Jason 
+Schwartz, and their co-stars.” By contrast, a more typical director’s network of film stars is more fragmented, producing a less cohesive vibe from one film to another.
