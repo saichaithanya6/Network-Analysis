@@ -1,0 +1,232 @@
+---
+title: "Wes Anderson's Favorites: Network Structures as Iconic Style"
+author: "Chip Betterley, Sai Chaithanya, Mia Lakstigala, Gopichand Mukkapati"
+date: "2023-07-09"
+output: html_document
+---
+
+# Introduction and Goals
+
+Wes Anderson writes and directs films with an instantly-recognizable style. From the powder blue uniforms in *The Life Aquatic with Steve Zissou* to the retro pastels in *The Grand Budapest Hotel*, as well as the recurrence of lead actors like Bill Murray and Owen Wilson, filmgoers instantly recognize continuities between the otherwise unrelated stories in his films.
+
+With this summer's release of his latest project, *Asteroid City*, this is a perfect time to explore the networks arising from these recurring casts and see what they can tell us about each films similarities and differences.  This report will contrast the Wes Anderson network with an equivalent network based on Steven Spielberg films, which serve as a sort of baseline representing a more a typical body of film (albeit an extremely successful one).  Throughout this report, `wa_` and `ss_` prefixes denote each director's data sets.
+
+Given the bimodal undirected nature of these networks, we focus on three types of analysis:
+
+- Part A: Network-level metrics
+
+- Part B: Centrality and node importance
+
+- Part C: Communities and subgroups
+
+
+# Libraries
+
+This analysis uses a combination of social network analysis packages from class as well as popular data wrangling tools from the [Tidyverse](https://www.tidyverse.org/).
+
+```{r, message = FALSE, warning = FALSE}
+library(dplyr)
+library(magrittr)
+library(igraph)
+```
+
+
+# Data Sets
+
+Please make sure that this RMD file is in a directory that contains `data/clean_data.RData`.
+
+We used data from [IMDB (the Internet Movie Database)](https://www.imdb.com/) to construct affiliate and adjacency matrices for 11 films and 25 lead actors and actresses among Wes Anderson films.  These relationships represent when two actors lead in the same film together.  We also retrieved additional metadata about each film such as date, awards, and ratings.  This exercise was repeated for Steven Spielberg (34 actors, 13 films).
+
+These data sets were retrieved using the `imdb` package ([github.com/RMHogervorst/imdb](https://github.com/RMHogervorst/imdb)) as well as the [OMDB API](https://www.omdbapi.com/). See `clean_imdb_data.R` for details on how we constructed our data sets using these APIs.
+
+```{r}
+load("data/clean_data.RData")
+```
+
+
+# Initial Data Exploration
+
+First let's get a rough feel for these networks by plotting each unimodal network.
+
+```{r}
+wa_color <- "rosybrown1"
+ss_color <- "paleturquoise1"
+
+set.seed(1)
+graph_from_adjacency_matrix(wa_actors_adjmat, "undirected") %>%
+  plot(main = "Co-Actors in Wes Anderson Films", vertex.label.cex = .7, vertex.color = wa_color)
+```
+
+Although this is a bit messy, we can see some important patterns already. 
+For example, it appears that there are 4 components, including 1 relatively large component.  
+
+We can also see high-connectivity nodes. For example, Bill Murray is a highly connected node with many relationships within and between apparent clusters.  In other words, Wes Anderson uses him a lot.  This makes intuitive sense to any filmgoer who watched *The Life Aquatic* and immediately fell in love with this style of storytelling and demand that the market provides more of it.
+
+By contrast, Steven Spielberg's star actor/actress network is much more fragmented:
+
+```{r}
+set.seed(3)
+graph_from_adjacency_matrix(ss_actors_adjmat, "undirected") %>%
+  plot(main = "Co-Actors in Steven Spielberg Films", vertex.label.cex = .7, vertex.color = ss_color)
+```
+
+We should follow up on these notions with statistical methods, but a story begins to develop even from visual inspection.
+
+Now let's explore these network from the perspective of films:
+
+```{r}
+set.seed(1)
+graph_from_adjacency_matrix(wa_films_adjmat, "undirected") %>%
+  plot(main = "Wes Anderson Films with Common Lead Actors", vertex.label.cex = .7, vertex.color = wa_color)
+```
+
+This confirms one of our priors: Wes Anderson really does work with a recurring cast of lead actors and actresses in most of his work.  And some of his most (subjectively) beloved work also appear the most connected in this network (*The Darjeeling Limited* and *The Life Aquatic*).
+
+The outliers are also illuminating.  *The Grand Budapest Hotel* undeniably *feels* very Wes Anderson, despite sharing no lead cast with his other works.  That demonstrates that his visual style and storytelling are a major part of what makes his films feel cohesive with each other, even when they do not share his go-to cast members.
+
+By contrast, Steven Spielberg's films tend not to share *any* lead actors or actresses (with exceptions, especially the *Indiana Jones* franchise).
+
+```{r}
+set.seed(3)
+graph_from_adjacency_matrix(ss_films_adjmat, "undirected") %>%
+  plot(main = "Steven Spielberg Films with Common Lead Actors", vertex.label.cex = .7, vertex.color = ss_color)
+```
+
+Having completed this initial exploration, let's apply specific social network analytics tools to developer deeper insights into these networks.
+
+
+# Analysis
+
+
+## Part A: Network-Level Metrics
+
+We measured size, density, components, diameter, & clustering coefficient to understand the network level dynamics for each network.
+
+```{r}
+wa <- graph_from_adjacency_matrix(wa_actors_adjmat, mode="undirected")
+ss <- graph_from_adjacency_matrix(ss_actors_adjmat, mode="undirected")
+```
+
+### Size
+```{r, results='asis'}
+cat("WA edges: ", gsize(wa), "  \n SS edges: ", gsize(ss))
+cat("WA nodes: ", gorder(wa), "  \n SS nodes: ", gorder(ss))
+```
+
+The SS (Steven Speilberg) cast network is larger in terms of both edges and nodes.
+
+
+### Density
+```{r, results='asis'}
+cat("WA density: ", round(edge_density(wa), 2), "  \n SS density: ", round(edge_density(ss), 2))
+```
+
+Both networks are sparse (only 11% and 7% of possible connections exist), with the Wes Anderson network being relatively less so. A low density value can indicate that the network is decentralized or that there are many isolated nodes or disconnected components within the network. 
+
+
+### Diameter
+```{r, results='asis'}
+cat("WA diameter: ", diameter(wa), "  \n SS diameter: ", diameter(ss))
+```
+
+Since the Steven Spielberg network is more fragmented, it makes sense that the longest path between connected nodes would be shorter than that in the Wes Anderson network.
+
+
+### Clustering coefficient
+```{r, results='asis'}
+cat("WA transitivity: ", round(transitivity(wa, type = "average"), 2), "  \n ",
+    "SS transitivity: ", round(transitivity(ss, type = "average"), 2))
+```
+
+Nodes in both networks have a high tendency to cluster together, and that there are many closed triads.  Each node's neighbors are very likely to be connected to each other.  This makes intuitive sense, given that most films in the data set list at least 3 lead actors and actresses.  
+
+
+### Components
+```{r, results='asis'}
+cat("WA components: ", groups(components(wa)) %>% length(), "  \n ",
+    "SS components: ", groups(components(ss)) %>% length())
+```
+
+The SS network has twice as many components than the WA network. Given that it has only 36% more nodes, we can conclude that the structure is indeed more fragmented for reasons other than size alone. This reinforces the theme that Wes Anderson tends to mix together lead actors from his previous films, and Steven Spielberg does not.
+
+
+
+## Part B: Centrality and Node Importance
+
+### Degree Distributions
+
+```{r, out.width="50%"}
+hist(degree(wa), main = "Histogram of Degree (Wes Anderson Stars)", breaks = 1:6)
+hist(degree(ss), main = "Histogram of Degree (Steven Spielberg Stars)", breaks = 1:8)
+```
+
+Both actor networks exhibit characteristics of a real network. Most nodes have few connections, with a few outliers that are much more connected.  This tail of outliers is larger among the WA network, representing the connective tissue of recurring actors who connect disparate parts of the network.
+
+
+### Eigenvector Centrality
+
+```{r}
+wa_eigen <- eigen_centrality(wa)$vector %>% sort(decreasing = TRUE)
+summary(wa_eigen)
+```
+
+```{r}
+ss_eigen <- eigen_centrality(ss)$vector %>% sort(decreasing = TRUE)
+summary(ss_eigen)
+```
+
+Given the fragmented nature of the SS network, most nodes have no influence on the network as measured by eigenvector centrality. 
+
+Here are the most influential members of each network using this measure:
+
+```{r}
+wa_eigen %>% head(3)
+ss_eigen %>% head(3)
+```
+
+As observed in the initial analysis, Owen Wilson and Bill Murray are very important to the Wes Anderson network.  Jason Schwartzman is a less obvious candidate for "most influential", but this measurement shows that he's up there.  In contrast, only Harrison Ford has a high eigenvector centrality score due to his role in the network's largest component (the *Indiana Jones* series).
+
+
+We also explored closeness and betweenness, but given the presence of several small components in each network, the results are not very insightful.  For example, in both networks there are many actors with relatively high closeness due to their membership in a relatively small, isolated, clique-y component.
+
+
+
+## Part C: Communities and Subgroups
+
+Finally, we analyzed clusters within the largest component in each of the networks.
+
+```{r}
+# create subgraph from largest component
+wa_maincomponent_id <- which.max(components(wa)$csize)
+wa_maincomponent_vertices <- V(wa)[components(wa)$membership == wa_maincomponent_id]
+wa_maincomponent <- induced_subgraph(wa, wa_maincomponent_vertices)
+
+# create and plot clusters within this component
+set.seed(432)
+wa_clusters <- cluster_walktrap(wa_maincomponent, steps = 20)
+plot(wa_clusters, wa_maincomponent,
+     main = "Wes Anderson Clusters (Within Largest Component)", vertex.label.cex = .7)
+```
+
+From this we can see *why* Owen Wilson, Bull Murray, and Jason Schwartzman have such strong connectedness indicators: they each represent the connective tissue between two or more clusters.  They're also a clique, indirectly connecting each one of them to other regions of the network.  Adrien Brody and Anjelica Huston are also crucial links in the network, but since they only connect to two other nodes each outside their own clusters, they are relatively less central.
+
+
+```{r}
+ss_maincomponent_id <- which.max(components(ss)$csize)
+ss_maincomponent_vertices <- V(ss)[components(ss)$membership == ss_maincomponent_id]
+ss_maincomponent <- induced_subgraph(ss, ss_maincomponent_vertices)
+
+# create and plot clusters within this component
+set.seed(432)
+ss_clusters <- cluster_walktrap(ss_maincomponent, steps = 20)
+plot(ss_clusters, ss_maincomponent,
+     main = "Steven Spielberg Clusters (Within Largest Component)", vertex.label.cex = .7)
+```
+
+The largest component in the Steven Spielberg network represents the *Indiana Jones* films.  Here we can see that the star, Harrison Ford, connects all of the clusters, with each film's co-stars forming their own clusters.
+
+
+
+# Wrap Up
+
+The look and feel of a Wes Anderson film is unmistakable to fans.  Through the tools of social network analysis, we can explore the degree to which this director reuses actors / actresses across the body of work, and which ones are particularly central in the network.  Before running this analysis one might describe the vibe using visual and storytelling elements -- now, one might also describe the vibe as "Owen Wilson, Bill Murray, Jason Schwartz, and their co-stars."  By contrast, a more typical director's network of film stars is more fragmented, producing a less cohesive vibe from one film to another.
